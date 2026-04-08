@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>F1 Team Driver Hierarchical Tree</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b0f14;
+      color: white;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 18px 0 8px;
+      color: #ff3b30;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #cbd5e1;
+      margin-bottom: 14px;
+      font-size: 14px;
+    }
+
+    .controls {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    select {
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      background: #1e293b;
+      color: white;
+    }
+
+    #chart {
+      width: 100%;
+      height: calc(100vh - 140px);
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: linear-gradient(180deg, #0b0f14 0%, #111827 100%);
+    }
+
+    .link {
+      fill: none;
+      stroke: #64748b;
+      stroke-width: 2px;
+    }
+
+    .node circle {
+      stroke: white;
+      stroke-width: 1.5px;
+    }
+
+    .node text {
+      fill: white;
+      font-size: 13px;
+      dominant-baseline: middle;
+    }
+
+    .tooltip {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      background: rgba(15, 23, 42, 0.95);
+      color: white;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    }
+
+    .legend {
+      width: fit-content;
+      margin: 0 auto 8px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 13px;
+      color: #e2e8f0;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Formula 1 Team Driver Tree</h1>
+  <div class="subtitle">Hierarchical node-link view of current and past drivers by team</div>
+
+  <div class="controls">
+    <label for="teamSelect">Select Team: </label>
+    <select id="teamSelect"></select>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:#ff3b30;"></span> Team</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span> Current Drivers Branch</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#94a3b8;"></span> Past Drivers Branch</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span> Driver</div>
+  </div>
+
+  <div id="chart"></div>
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    const teamTrees = [
+      {
+        name: "Mercedes",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "George Russell" },
+              { name: "Kimi Antonelli" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Lewis Hamilton" },
+              { name: "Valtteri Bottas" },
+              { name: "Nico Rosberg" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Ferrari",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Charles Leclerc" },
+              { name: "Lewis Hamilton" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Carlos Sainz" },
+              { name: "Fernando Alonso" },
+              { name: "Sebastian Vettel" },
+              { name: "Kimi Räikkönen" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "McLaren",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Lando Norris" },
+              { name: "Oscar Piastri" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Lewis Hamilton" },
+              { name: "Fernando Alonso" },
+              { name: "Carlos Sainz" },
+              { name: "Daniel Ricciardo" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Red Bull Racing",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Max Verstappen" },
+              { name: "Isack Hadjar" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Sergio Perez" },
+              { name: "Alexander Albon" },
+              { name: "Pierre Gasly" },
+              { name: "Daniel Ricciardo" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Racing Bulls",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Liam Lawson" },
+              { name: "Arvid Lindblad" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Pierre Gasly" },
+              { name: "Carlos Sainz" },
+              { name: "Max Verstappen" },
+              { name: "Yuki Tsunoda" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Williams",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Carlos Sainz" },
+              { name: "Alexander Albon" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "George Russell" },
+              { name: "Valtteri Bottas" },
+              { name: "Lance Stroll" },
+              { name: "Logan Sargeant" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Aston Martin",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Fernando Alonso" },
+              { name: "Lance Stroll" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Sebastian Vettel" },
+              { name: "Sergio Perez" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Alpine",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Pierre Gasly" },
+              { name: "Franco Colapinto" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Fernando Alonso" },
+              { name: "Esteban Ocon" },
+              { name: "Oscar Piastri" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Haas F1 Team",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Esteban Ocon" },
+              { name: "Oliver Bearman" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Nico Hulkenberg" },
+              { name: "Kevin Magnussen" },
+              { name: "Mick Schumacher" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Audi",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Nico Hulkenberg" },
+              { name: "Gabriel Bortoleto" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: [
+              { name: "Valtteri Bottas" },
+              { name: "Charles Leclerc" },
+              { name: "Zhou Guanyu" }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Cadillac",
+        children: [
+          {
+            name: "Current Drivers",
+            children: [
+              { name: "Sergio Perez" },
+              { name: "Valtteri Bottas" }
+            ]
+          },
+          {
+            name: "Past Drivers",
+            children: []
+          }
+        ]
+      }
+    ];
+
+    const select = d3.select("#teamSelect");
+    const tooltip = d3.select("#tooltip");
+
+    teamTrees.forEach(team => {
+      select.append("option")
+        .attr("value", team.name)
+        .text(team.name);
+    });
+
+    function getNodeColor(d) {
+      if (d.depth === 0) return "#ff3b30";
+      if (d.data.name === "Current Drivers") return "#22c55e";
+      if (d.data.name === "Past Drivers") return "#94a3b8";
+      return "#38bdf8";
+    }
+
+    function drawTree(teamName) {
+      d3.select("#chart").selectAll("*").remove();
+
+      const width = document.getElementById("chart").clientWidth;
+      const height = document.getElementById("chart").clientHeight;
+
+      const svg = d3.select("#chart")
+        .append("svg")
+        .attr("viewBox", [0, 0, width, height]);
+
+      const selectedTeam = teamTrees.find(t => t.name === teamName);
+
+      const root = d3.hierarchy(selectedTeam);
+      const treeLayout = d3.tree().size([height - 80, width - 250]);
+      treeLayout(root);
+
+      const g = svg.append("g")
+        .attr("transform", "translate(90,40)");
+
+      g.selectAll(".link")
+        .data(root.links())
+        .join("path")
+        .attr("class", "link")
+        .attr("d", d3.linkHorizontal()
+          .x(d => d.y)
+          .y(d => d.x));
+
+      const node = g.selectAll(".node")
+        .data(root.descendants())
+        .join("g")
+        .attr("class", "node")
+        .attr("transform", d => `translate(${d.y},${d.x})`);
+
+      node.append("circle")
+        .attr("r", d => d.depth === 0 ? 16 : d.depth === 1 ? 12 : 9)
+        .attr("fill", d => getNodeColor(d))
+        .on("mouseover", function(event, d) {
+          d3.select(this).attr("r", d.depth === 0 ? 20 : d.depth === 1 ? 15 : 12);
+
+          let label = "";
+          if (d.depth === 0) {
+            label = `<strong>Team:</strong> ${d.data.name}`;
+          } else if (d.depth === 1) {
+            label = `<strong>Category:</strong> ${d.data.name}`;
+          } else {
+            label = `<strong>Driver:</strong> ${d.data.name}`;
+          }
+
+          tooltip
+            .style("opacity", 1)
+            .html(label);
+        })
+        .on("mousemove", function(event) {
+          tooltip
+            .style("left", (event.pageX + 12) + "px")
+            .style("top", (event.pageY - 18) + "px");
+        })
+        .on("mouseout", function(event, d) {
+          d3.select(this).attr("r", d.depth === 0 ? 16 : d.depth === 1 ? 12 : 9);
+          tooltip.style("opacity", 0);
+        });
+
+      node.append("text")
+        .attr("x", d => d.children ? -16 : 14)
+        .attr("text-anchor", d => d.children ? "end" : "start")
+        .style("font-size", d => d.depth === 0 ? "16px" : "13px")
+        .style("font-weight", d => d.depth <= 1 ? "bold" : "normal")
+        .text(d => d.data.name);
+    }
+
+    drawTree(teamTrees[0].name);
+
+    select.on("change", function() {
+      drawTree(this.value);
+    });
+  </script>
+</body>
+</html>
